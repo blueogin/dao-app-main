@@ -23,6 +23,7 @@ import {
   daoABI,
   daoAddress,
 } from "../../Constants/config";
+import { useWalletStore } from '../../Store/walletStore';
 
 const web3 = new Web3(new Web3.providers.HttpProvider(RPC));
 const vrtContract = new web3.eth.Contract(vrtABI, vrtAddress);
@@ -129,6 +130,7 @@ class Dashboard extends React.Component {
     await this.init(this.props);
   }
   render() {
+    console.log("Mike accountWallet : ", this.props.accountWallet);
     return (
       <Box sx={{ pb: 7 }}>
         <Box
@@ -266,7 +268,7 @@ class Dashboard extends React.Component {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {!this.state.loading
+                  {!(this.props.accountWallet === undefined)
                     ? this.state.realHolderTable.map((row, index) => (
                         <TableRow
                           key={index}
@@ -346,12 +348,19 @@ const withHook = (Component) => {
     const matchUpMd = useMediaQuery(theme.breakpoints.up("md"));
     // const matchDownMd = useMediaQuery(theme.breakpoints.up('md'));
     const { account } = useSelector((state) => state.userReducer);
+    const { accountWallet } = useWalletStore(
+      state => ({
+        accountWallet: state.account
+      }),      
+    );
+    console.log("Mike accountWallet withHook : ", accountWallet);
     return (
       <Component
         theme={theme}
         account={account}
         matchDownLg={matchDownLg}
         matchUpMd={matchUpMd}
+        accountWallet = {accountWallet}
         {...props}
       />
     );

@@ -23,6 +23,7 @@ import {
   daoABI,
   daoAddress,
 } from "../../Constants/config";
+import { useWalletStore } from '../../Store/walletStore';
 
 const web3 = new Web3(new Web3.providers.HttpProvider(RPC));
 const vrtContract = new web3.eth.Contract(vrtABI, vrtAddress);
@@ -36,7 +37,6 @@ class Header extends React.Component {
       position: "",
     };
   }
-
   setDark = () => {
     this.props.dispatch({ type: "SET_THEME", payload: "dark" });
     setToLS("vegan-theme", "dark");
@@ -46,8 +46,7 @@ class Header extends React.Component {
     this.props.dispatch({ type: "SET_THEME", payload: "light" });
     setToLS("vegan-theme", "light");
   };
-
-  async walletConnect() {
+  walletConnect = async () => {
     try {
       await window.ethereum.request({
         method: "wallet_switchEthereumChain",
@@ -86,6 +85,9 @@ class Header extends React.Component {
       await window.ethereum.enable();
       const clientWeb3 = window.web3;
       const accounts = await clientWeb3.eth.getAccounts();
+
+      this.props.setAccount(accounts[0]);
+      
       this.setState({
         account: accounts[0],
       });
@@ -95,33 +97,40 @@ class Header extends React.Component {
       window.web3 = new Web3(window.web3.currentProvider);
       const clientWeb3 = window.web3;
       const accounts = await clientWeb3.eth.getAccounts();
+
+      this.props.setAccount(accounts[0]);
+      
       this.setState({
         account: accounts[0],
       });
+      this.props.setAccount(accounts[0]);
       this.props.dispatch({ type: "SET_ACCOUNT", payload: accounts[0] });
       await this.getPosition(accounts[0]);
     }
-
     const { ethereum } = window;
-    ethereum.on("accountsChanged", async (accounts) => {
-      try {
-        accounts = web3.utils.toChecksumAddress(accounts + "");
-      } catch (err) {}
+    if(ethereum) {
+      ethereum.on("accountsChanged", async (accounts) => {
+        console.log("Mike Mike");
+        try {
+          accounts = web3.utils.toChecksumAddress(accounts + "");
+        } catch (err) {}
 
-      this.setState({
-        account: accounts,
+        this.props.setAccount(accounts[0]);
+  
+        this.setState({
+          account: accounts,
+        });
+        this.checkDashBoard(this.state.account);
+        this.checkElectionStatus();
       });
-      this.checkDashBoard(this.state.account);
-      this.checkElectionStatus();
-    });
-
-    ethereum.on("chainChanged", async (chainId) => {
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: web3.utils.toHex(1666600000) }],
+  
+      ethereum.on("chainChanged", async (chainId) => {
+        await window.ethereum.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: web3.utils.toHex(1666600000) }],
+        });
       });
-    });
-
+    }
     // this.checkDashBoard(this.state.linkedAccount)
   }
 
@@ -304,10 +313,16 @@ const withHook = (Header) => {
     const theme = useTheme();
     const dispatch = useDispatch();
     const matchUpMd = useMediaQuery(theme.breakpoints.up("md"));
+    const { setAccount } = useWalletStore(
+      state => ({
+        setAccount: state.actions.setAccount
+      }),      
+    );
     return (
       <Header
         theme={theme}
         dispatch={dispatch}
+        setAccount={setAccount}
         {...props}
         matchUpMd={matchUpMd}
       />
